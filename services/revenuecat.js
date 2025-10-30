@@ -16,7 +16,7 @@ const API_KEY = Platform.select({
  */
 export async function initRevenueCat(userId) {
   try {
-    if (!API_KEY) {
+    if (!API_KEY || API_KEY.includes('your_')) {
       console.warn('RevenueCat API key not configured');
       return;
     }
