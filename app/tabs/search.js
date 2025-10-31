@@ -11,6 +11,7 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { trackScreen } from '../../services/analytics';
 import ApiService from '../../services/api';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -77,7 +78,8 @@ export default function SearchScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <Text style={styles.title}>Search for Money</Text>
       <Text style={styles.subtitle}>
@@ -196,11 +198,16 @@ export default function SearchScreen() {
           <Text style={styles.infoItem}>• 100% secure & private</Text>
         </View>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

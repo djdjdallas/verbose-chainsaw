@@ -17,14 +17,13 @@ export default function TabsLayout() {
           paddingTop: 8,
           height: 60,
         },
-        headerShown: true,
+        headerShown: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Dashboard',
-          headerTitle: 'Found Money',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>💰</Text>,
         }}
       />
@@ -32,7 +31,6 @@ export default function TabsLayout() {
         name="search"
         options={{
           title: 'Search',
-          headerTitle: 'Search Money',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>🔍</Text>,
         }}
       />
@@ -40,7 +38,6 @@ export default function TabsLayout() {
         name="wallet"
         options={{
           title: 'Wallet',
-          headerTitle: 'My Claims',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>📁</Text>,
         }}
       />
@@ -48,7 +45,6 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          headerTitle: 'Settings',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>⚙️</Text>,
         }}
       />

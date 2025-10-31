@@ -10,6 +10,7 @@ import { useApp } from '../../contexts/AppContext';
 import Card from '../../components/Card';
 import { trackScreen } from '../../services/analytics';
 import { signOut } from '../../services/supabase';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -89,7 +90,8 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* User Info Card */}
       <Card style={styles.userCard}>
         <View style={styles.avatar}>
@@ -189,11 +191,16 @@ export default function ProfileScreen() {
 
       {/* App Version */}
       <Text style={styles.version}>Version 1.0.0</Text>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

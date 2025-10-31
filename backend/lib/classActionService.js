@@ -4,7 +4,7 @@
  */
 
 import * as cheerio from 'cheerio';
-import { scoreOpportunityMatch } from './openai.js';
+import { scoreOpportunityMatch } from './claude.js';
 
 /**
  * Mock class action database (in production, this would connect to real APIs)

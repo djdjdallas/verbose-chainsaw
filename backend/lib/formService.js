@@ -4,7 +4,7 @@
  */
 
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
-import { autoFillClaimForm } from './openai.js';
+import { autoFillClaimForm } from './claude.js';
 import { createServiceClient } from './supabase.js';
 
 /**

@@ -6,11 +6,14 @@
 import { NextResponse } from 'next/server';
 import { scanEmailsForMoney, refreshAccessToken } from '@/lib/gmailService';
 import { createServiceClient, getUserFromRequest } from '@/lib/supabase';
+import { logError, logInfo } from '@/lib/logger';
 
 /**
  * Scan user's Gmail for money opportunities
  */
 export async function POST(request) {
+  const startTime = Date.now();
+
   try {
     const user = await getUserFromRequest(request);
 
@@ -20,6 +23,8 @@ export async function POST(request) {
         { status: 401 }
       );
     }
+
+    logInfo('Starting Gmail scan', { userId: user.id });
 
     const supabase = createServiceClient();
 
@@ -53,7 +58,7 @@ export async function POST(request) {
     } catch (error) {
       // If error, try refreshing the access token
       if (profile.gmail_refresh_token) {
-        console.log('Access token expired, refreshing...');
+        logInfo('Access token expired, refreshing', { userId: user.id });
 
         try {
           accessToken = await refreshAccessToken(profile.gmail_refresh_token);
@@ -70,7 +75,7 @@ export async function POST(request) {
           // Retry scan with new token
           scanResults = await scanEmailsForMoney(accessToken, user.id);
         } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
+          logError('Token refresh failed', refreshError, { userId: user.id });
           return NextResponse.json(
             { error: 'Gmail authentication expired. Please reconnect Gmail.' },
             { status: 401 }
@@ -92,7 +97,7 @@ export async function POST(request) {
       });
 
     if (scanError) {
-      console.error('Error saving scan results:', scanError);
+      logError('Error saving scan results', scanError, { userId: user.id });
     }
 
     // Save found opportunities to money_found table
@@ -121,9 +126,17 @@ export async function POST(request) {
         .insert(moneyRecords);
 
       if (insertError) {
-        console.error('Error saving money opportunities:', insertError);
+        logError('Error saving money opportunities', insertError, { userId: user.id });
       }
     }
+
+    const duration = Date.now() - startTime;
+    logInfo('Gmail scan completed', {
+      userId: user.id,
+      duration,
+      emailsScanned: scanResults.emailsScanned,
+      opportunitiesFound: scanResults.opportunitiesFound.length
+    });
 
     return NextResponse.json({
       success: true,
@@ -134,9 +147,14 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Gmail scan error:', error);
+    const duration = Date.now() - startTime;
+    logError('Gmail scan error', error, { duration });
+
     return NextResponse.json(
-      { error: 'Failed to scan Gmail' },
+      {
+        error: 'Failed to scan Gmail',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

@@ -6,11 +6,15 @@
 import { NextResponse } from 'next/server';
 import { generatePDF, uploadPDF, saveFormData } from '@/lib/formService';
 import { createServiceClient, getUserFromRequest } from '@/lib/supabase';
+import { logError, logInfo } from '@/lib/logger';
+import { validateRequiredFields, validateBodySize } from '@/lib/validation';
 
 /**
  * Generate PDF from form data
  */
 export async function POST(request) {
+  const startTime = Date.now();
+
   try {
     const user = await getUserFromRequest(request);
 
@@ -22,14 +26,27 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { formData, moneyFoundId, claimInfo } = body;
 
-    if (!formData) {
+    // Validate request size (PDFs can be large)
+    const sizeValidation = validateBodySize(body, 5000); // 5MB max
+    if (!sizeValidation.valid) {
       return NextResponse.json(
-        { error: 'Form data is required' },
+        { error: sizeValidation.error },
+        { status: 413 }
+      );
+    }
+
+    // Validate required fields
+    const validation = validateRequiredFields(body, ['formData']);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
         { status: 400 }
       );
     }
+
+    const { formData, moneyFoundId, claimInfo } = body;
+    logInfo('Starting PDF generation', { userId: user.id, moneyFoundId });
 
     // Get claim information if moneyFoundId provided
     let claimDetails = claimInfo;
@@ -64,13 +81,21 @@ export async function POST(request) {
         // Save form data and PDF URL to database
         await saveFormData(user.id, moneyFoundId, formData, pdfUrl);
       } catch (uploadError) {
-        console.error('PDF upload error:', uploadError);
+        logError('PDF upload error', uploadError, { userId: user.id, moneyFoundId });
         // Continue without saving URL
       }
     }
 
     // Convert buffer to base64 for response
     const pdfBase64 = pdfBuffer.toString('base64');
+
+    const duration = Date.now() - startTime;
+    logInfo('PDF generated successfully', {
+      userId: user.id,
+      moneyFoundId,
+      duration,
+      pdfSize: pdfBuffer.length
+    });
 
     return NextResponse.json({
       success: true,
@@ -80,9 +105,14 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('PDF generation error:', error);
+    const duration = Date.now() - startTime;
+    logError('PDF generation error', error, { duration });
+
     return NextResponse.json(
-      { error: 'Failed to generate PDF' },
+      {
+        error: 'Failed to generate PDF',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

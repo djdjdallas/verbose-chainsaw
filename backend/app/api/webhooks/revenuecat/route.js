@@ -28,20 +28,33 @@ export async function POST(request) {
     const rawBody = await request.text();
     const signature = request.headers.get('x-revenuecat-signature');
 
-    // Verify webhook signature if secret is configured
-    if (process.env.REVENUECAT_WEBHOOK_SECRET && signature) {
-      const isValid = verifyWebhookSignature(
-        rawBody,
-        signature,
-        process.env.REVENUECAT_WEBHOOK_SECRET
+    // Verify webhook signature (REQUIRED in production)
+    if (!process.env.REVENUECAT_WEBHOOK_SECRET) {
+      console.error('REVENUECAT_WEBHOOK_SECRET not configured');
+      return NextResponse.json(
+        { error: 'Webhook configuration error' },
+        { status: 500 }
       );
+    }
 
-      if (!isValid) {
-        return NextResponse.json(
-          { error: 'Invalid webhook signature' },
-          { status: 401 }
-        );
-      }
+    if (!signature) {
+      return NextResponse.json(
+        { error: 'Missing webhook signature' },
+        { status: 401 }
+      );
+    }
+
+    const isValid = verifyWebhookSignature(
+      rawBody,
+      signature,
+      process.env.REVENUECAT_WEBHOOK_SECRET
+    );
+
+    if (!isValid) {
+      return NextResponse.json(
+        { error: 'Invalid webhook signature' },
+        { status: 401 }
+      );
     }
 
     const event = JSON.parse(rawBody);

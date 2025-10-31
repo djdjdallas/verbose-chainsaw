@@ -71,8 +71,13 @@ export async function GET(request) {
       );
     }
 
-    // Redirect to app success page
-    const successUrl = `${process.env.NEXT_PUBLIC_APP_URL}/gmail-connected?success=true`;
+    // Redirect to mobile app using deep link scheme
+    // For mobile: foundmoney://gmail-connected?success=true
+    // For web: fallback to web URL
+    const isMobile = request.headers.get('user-agent')?.toLowerCase().includes('mobile');
+    const successUrl = isMobile
+      ? 'foundmoney://gmail-connected?success=true'
+      : `${process.env.NEXT_PUBLIC_APP_URL}/gmail-connected?success=true`;
 
     return NextResponse.redirect(successUrl);
 

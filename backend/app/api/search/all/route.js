@@ -8,11 +8,15 @@ import { searchClassActions } from '@/lib/classActionService';
 import { searchAllStates } from '@/lib/unclaimedPropertyService';
 import { scanEmailsForMoney } from '@/lib/gmailService';
 import { createServiceClient, getUserFromRequest } from '@/lib/supabase';
+import { logError, logInfo } from '@/lib/logger';
+import { validateBodySize } from '@/lib/validation';
 
 /**
  * Run comprehensive search across all sources
  */
 export async function POST(request) {
+  const startTime = Date.now();
+
   try {
     const user = await getUserFromRequest(request);
 
@@ -22,6 +26,18 @@ export async function POST(request) {
         { status: 401 }
       );
     }
+
+    // Validate request size
+    const body = await request.json();
+    const sizeValidation = validateBodySize(body, 100); // 100KB max
+    if (!sizeValidation.valid) {
+      return NextResponse.json(
+        { error: sizeValidation.error },
+        { status: 413 }
+      );
+    }
+
+    logInfo('Starting comprehensive search', { userId: user.id });
 
     const supabase = createServiceClient();
 
@@ -62,7 +78,7 @@ export async function POST(request) {
 
     // 1. Search Class Actions
     try {
-      console.log('Searching class actions...');
+      logInfo('Searching class actions', { userId: user.id });
       const classActionResults = await searchClassActions(userData);
       results.classActions = classActionResults;
 
@@ -84,17 +100,20 @@ export async function POST(request) {
             metadata: r
           }));
 
-        await supabase.from('money_found').insert(records);
+        const { error: insertError } = await supabase.from('money_found').insert(records);
+        if (insertError) {
+          logError('Failed to save class action results', insertError, { userId: user.id });
+        }
       }
     } catch (error) {
-      console.error('Class action search error:', error);
+      logError('Class action search error', error, { userId: user.id });
       errors.push('Class action search failed');
     }
 
     // 2. Search Unclaimed Property
     try {
       if (profile.first_name && profile.last_name) {
-        console.log('Searching unclaimed property...');
+        logInfo('Searching unclaimed property', { userId: user.id });
         const propertyResults = await searchAllStates({
           firstName: profile.first_name,
           lastName: profile.last_name,
@@ -117,18 +136,21 @@ export async function POST(request) {
             metadata: p
           }));
 
-          await supabase.from('money_found').insert(records);
+          const { error: insertError } = await supabase.from('money_found').insert(records);
+          if (insertError) {
+            logError('Failed to save unclaimed property results', insertError, { userId: user.id });
+          }
         }
       }
     } catch (error) {
-      console.error('Unclaimed property search error:', error);
+      logError('Unclaimed property search error', error, { userId: user.id });
       errors.push('Unclaimed property search failed');
     }
 
     // 3. Scan Gmail (if connected)
     try {
       if (profile.gmail_connected && profile.gmail_access_token) {
-        console.log('Scanning Gmail...');
+        logInfo('Scanning Gmail', { userId: user.id });
         const gmailResults = await scanEmailsForMoney(
           profile.gmail_access_token,
           user.id
@@ -150,11 +172,14 @@ export async function POST(request) {
             metadata: o
           }));
 
-          await supabase.from('money_found').insert(records);
+          const { error: insertError } = await supabase.from('money_found').insert(records);
+          if (insertError) {
+            logError('Failed to save Gmail scan results', insertError, { userId: user.id });
+          }
         }
       }
     } catch (error) {
-      console.error('Gmail scan error:', error);
+      logError('Gmail scan error', error, { userId: user.id });
       errors.push('Gmail scan failed');
     }
 
@@ -187,6 +212,14 @@ export async function POST(request) {
 
     results.estimatedValue = estimatedValue;
 
+    const duration = Date.now() - startTime;
+    logInfo('Comprehensive search completed', {
+      userId: user.id,
+      duration,
+      totalFound: results.totalFound,
+      estimatedValue
+    });
+
     return NextResponse.json({
       success: true,
       results,
@@ -195,9 +228,17 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error('Comprehensive search error:', error);
+    const duration = Date.now() - startTime;
+    logError('Comprehensive search error', error, {
+      userId: 'unknown',
+      duration
+    });
+
     return NextResponse.json(
-      { error: 'Failed to complete comprehensive search' },
+      {
+        error: 'Failed to complete comprehensive search',
+        message: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }

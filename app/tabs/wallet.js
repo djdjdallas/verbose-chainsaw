@@ -10,6 +10,7 @@ import { useApp } from '../../contexts/AppContext';
 import Card from '../../components/Card';
 import { trackScreen } from '../../services/analytics';
 import { getMoneyFound } from '../../services/supabase';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -87,11 +88,12 @@ export default function WalletScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       {/* Header Stats */}
@@ -220,11 +222,16 @@ export default function WalletScreen() {
           • <Text style={styles.helpBold}>Received</Text>: Money in your account
         </Text>
       </Card>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',

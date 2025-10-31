@@ -28,6 +28,12 @@ export default function PaywallScreen() {
   }, []);
 
   const handleStartTrial = async () => {
+    // Check if user is authenticated
+    if (!state.user) {
+      router.push('/auth/sign-up');
+      return;
+    }
+
     setLoading(true);
     trackEvent(AnalyticsEvents.TRIAL_STARTED, {
       plan: selectedPlan,
@@ -46,7 +52,12 @@ export default function PaywallScreen() {
   const handleSkip = () => {
     trackEvent('Paywall Skipped', { foundAmount });
     dispatch({ type: 'COMPLETE_ONBOARDING' });
-    router.replace('/tabs');
+    // Redirect to sign up if user is not authenticated
+    if (!state.user) {
+      router.replace('/auth/sign-up');
+    } else {
+      router.replace('/tabs');
+    }
   };
 
   return (

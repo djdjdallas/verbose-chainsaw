@@ -4,7 +4,7 @@
  */
 
 import { google } from 'googleapis';
-import { analyzeEmailForMoney } from './openai.js';
+import { analyzeEmailForMoney } from './claude.js';
 
 /**
  * Create OAuth2 client for Gmail
